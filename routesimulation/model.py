@@ -1,8 +1,24 @@
+"""
+   :mod:`model` -- Data model for route simulation
+   ===============================================
+
+   .. module:: model
+      :platform: Unix, Windows
+      :synopsis: Data model for route simulation
+   .. moduleauthor:: Sjoerd van der Spoel <s.j.vanderspoel@utwente.nl>
+   .. moduleauthor:: Andrej Dobrkovic <a.dobrkovic@utwente.nl>
+"""
 from math import radians, sin, cos, sqrt, asin, fabs, atan2, pi, tan
 import random
 import operator
 
 class Edge:
+    """A directed edge between two points
+
+    :param start: Starting :class:`routesimulation.model.Point` of the edge
+    :param end: End :class:`routesimulation.model.Point` of the edge.
+
+    """
     def __init__(self, start, end):
         self.start = start
         self.end = end
@@ -16,8 +32,12 @@ class Edge:
     def __repr__(self):
         return repr(self.start) + "->" + repr(self.end)
 
-    """Gives the bearing of this Edge from start to end in radians"""
+    
     def bearing(self):
+        """Gives the bearing of this Edge from start to end in radians
+
+        :returns: float -- The Edge bearing in radians 
+        """
         start = self.start.toRadians()
         end = self.end.toRadians()
         lat1 = start.lat
@@ -27,15 +47,27 @@ class Edge:
 
         return atan2(sin(lon2-lon1) * cos(lat2), cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon2 - lon1))
 
-    """Gives the length of this Edge in meters"""
+    
     def length(self):
+        """Gives the length of this Edge in meters, i.e. the Haversine distance between its start and end points
+
+        :returns: float -- The length of this Edge in meters
+        """
         return self.start.distanceTo(self.end)
 
     def toVector(self):
         pass
 
-    """Gives a Point on this Edge at the specified distance from start"""
+    
     def pointAtDistance(self, distance, R = 6378137):
+        """Gives a :class:`model.Point` on this Edge at the specified distance from start
+
+        :param distance: The distance in meters from the start of the edge
+        :type distance: float
+        :param R: The circumference of the Earth at the coordinates of the edge. 
+        :type R: float
+        :returns: :class:`model.Point` -- A Point p on this Edge such that p.distanceTo(self.start)==distance
+        """
         if self.length() > distance:
             #print(self, "Calculating point at distance", distance)
             b = self.bearing()
@@ -256,9 +288,16 @@ class Graph:
         return self.nodes
 
 class Simulation:
-    #
-    def __init__(self, pathDict):
+    # Create a new simulation object
+    def __init__(self, pathDict, runTime):
         self.pathDict = pathDict
+        self.runTime = runTime
+        self.vehicles = []
+        for path, number in pathDict:
+            pass
+
+    def run(self):
+        pass
 
 class Path:
     # edges: Edges that make up this Path
