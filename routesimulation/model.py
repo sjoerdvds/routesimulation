@@ -309,7 +309,7 @@ class Path:
     # Returns a sequential list of the points on the edges of this path
     def getPoints(self):
         points = []
-        if len(edges) > 0:
+        if len(self.edges) > 0:
             points.append(self.edges[0].start)
 
         for edge in self.edges:
