@@ -7,6 +7,7 @@ Created on Fri Aug 21 13:24:10 2015
 
 from routesimulation.model import *
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Vector:
     def __init__(self, x, y):
@@ -95,7 +96,7 @@ class Vehicle:
         self.position = self.points[0]
         if len(self.points) > 1:
             self.destinationPoint = 1
-            self.destination = self.points[desinationPoint]
+            self.destination = self.points[self.destinationPoint]
             self.status = "ready"
         else:
             self.status = "arrived"
@@ -104,16 +105,20 @@ class Vehicle:
         # update vessel position (and status) if ready or sailing
         if (self.status == "ready") or (self.status == "sailing"):
             # get direction and random vector
-            direction = Vector.fromSimPoints(position, destination)
+            direction = Vector.fromSimPoints(self.position, self.destination)
             noise = Vector.getRandom(self.noiseFactor)
             #self.calculate_vectors()
             #self.randomize_vector(self.random_factor)
             
             # check if within destination distance (note: we use intensity of vecnorm and compare it with "speed" (also intensity)
-            
+
+            """
             if self.vec_norm <= self.speed:
                 self.status = "arrived"
                 self.position = self.end
+            """
+            if False:
+                pass
             # calculate new position by summing direction and random vector; direction vectory (identity) is multiplied by "speed" (intensity)
             else:
                 # !!!! correct speed later !!!!
@@ -127,6 +132,11 @@ class Vehicle:
                 #newY = self.position[1] + self.vec_dir[1] * self.speed + self.ran_vec[1]
                 #self.position = (newX, newY)
                 #self.status = "sailing"
+                
+    def debugPlot(self, color):
+        x = self.position.lon
+        y = self.position.lat
+        plt.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='k', markersize=4)
         
         
 """
@@ -185,15 +195,18 @@ CD = Edge(C,D)
 DE = Edge(D,E)
 
 p = Path([AB, BC, CD, DE], VehicleGenerator(totalVehicles = 100, totalDuration = 1000))
+p2 = Path([BC,CD], VehicleGenerator(totalVehicles = 50, totalDuration = 500))
 
-V1 = Vehicle(1, p, 10, 1, 1, 3)
+V1 = Vehicle(1, p, 0.3, 1, 1, 0.01)
+V2 = Vehicle(2, p2, 10, 1, 1, 3)
 
-a = Vector(5,6)
+plt.plot(A.lon, A.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
+plt.plot(B.lon, B.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
+plt.plot(C.lon, C.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
+plt.plot(D.lon, D.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
+plt.plot(E.lon, E.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
 
-A = (5,4)
-B = (3,4)
-b = Vector.fromPoints(A,B)
-
-C = p.getPoints()[1]
-D = p.getPoints()[2]
-c= Vector.fromSimPoints(C,D)
+V1.debugPlot('r')
+for i in range(0,10):
+    V1.update()
+    V1.debugPlot('r')
