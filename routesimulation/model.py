@@ -1,12 +1,10 @@
 """
-   :mod:`model` -- Data model for route simulation
-   ===============================================
+.. module:: model
+   :platform: Unix, Windows
+   :synopsis: Data model for route simulation
 
-   .. module:: model
-      :platform: Unix, Windows
-      :synopsis: Data model for route simulation
-   .. moduleauthor:: Sjoerd van der Spoel <s.j.vanderspoel@utwente.nl>
-   .. moduleauthor:: Andrej Dobrkovic <a.dobrkovic@utwente.nl>
+.. moduleauthor:: Sjoerd van der Spoel <s.j.vanderspoel@utwente.nl>
+.. moduleauthor:: Andrej Dobrkovic <a.dobrkovic@utwente.nl>
 """
 from math import radians, sin, cos, sqrt, asin, fabs, atan2, pi, tan
 import random
@@ -15,8 +13,10 @@ import operator
 class Edge:
     """A directed edge between two points
 
-    :param start: Starting :class:`routesimulation.model.Point` of the edge
-    :param end: End :class:`routesimulation.model.Point` of the edge.
+    :param start: Starting point of the edge
+    :type start: :class:`model.Point` 
+    :param end: End point of the edge.
+    :type end: :class:`model.Point` 
 
     """
     def __init__(self, start, end):
@@ -66,7 +66,7 @@ class Edge:
         :type distance: float
         :param R: The circumference of the Earth at the coordinates of the edge. 
         :type R: float
-        :returns: :class:`model.Point` -- A Point p on this Edge such that p.distanceTo(self.start)==distance
+        :returns: :class:`model.Point` -- A Point p on this Edge such that ``p.distanceTo(self.start)==distance``. If distance is greater than ``self.length()``, returns ``self.end``.
         """
         if self.length() > distance:
             #print(self, "Calculating point at distance", distance)
@@ -82,42 +82,93 @@ class Edge:
             return Point(lon2, lat2).toDegrees()
         else:
             return self.end
+
 class Trip:
+    """A sequence of :class:`model.Point` s
+
+    :param points: An ordered list of :class:`model.Point` s
+    :type points: list
+
+    """
     def __init__(self, points):
         self.points = points
 
    
 class Point:
+    """A point in two-dimensional space
+
+    :param lon: Longitude (x)
+    :type lon: float
+    :param lat: Latitude (y)
+    :type lat: float
+    """
     def __init__(self,lon, lat):
         self.lon = lon;
         self.lat = lat;
 
     def longitude(self):
+        """The longitude (x-axis) of this Point
+
+        :returns: float -- The Point longitude
+        """
         return self.lon;
 
     def latitude(self):
+        """The latitude (y-axis) of this Point
+
+        :returns: float -- The Point latitude
+        """
         return self.lat;
 
     def degreeRadianConversion(self, degreesToRadians = True):
+        """Create a **copy** of this Point converted to degrees (range -180:180) or radians (range -pi:pi)
+
+        :param degreesToRadians: If ``True``, create a copy with radians assuming this point uses degrees, or vice versa otherwise.
+        :type degreesToRadians: bool
+        :returns: :class:`model.Point`--A converted Point copy
+        """
         conv = pi/180 if degreesToRadians else 180/pi
         lon = self.lon * conv
         lat = self.lat * conv
         return Point(lon, lat)
 
     def toRadians(self):
+        """Create a **copy** of this Point converted to radians
+
+        :returns: :class:`model.Point`--A converted Point copy
+        """
         return self.degreeRadianConversion(degreesToRadians = True)
 
     def toDegrees(self):
+        """Create a **copy** of this Point converted to degrees
+
+        :returns: :class:`model.Point`--A converted Point copy
+        """
         return self.degreeRadianConversion(degreesToRadians = False)
 
     def toCartesian(self, R = 6378137):
+        """Calculate the position of this Point in Cartesian space
+
+        :param R: The circumference of the Earth at the coordinates of this point.
+        :type R: float
+        :returns: list -- x, y, and z coordinates of this Point in Cartesian space
+        """
         self = self.toRadians()
         x = R * cos(self.lat) * cos(self.lon)
         y = R * cos(self.lat) * sin(self.lon)
         z = R * sin(self.lat)
         return [x, y, z]
 
+
     def fromCartesian(vector, R = 6378137):
+        """Create a two-dimensional Point from a point in Cartesian space
+
+        :param vector: x, y and z coordinates of a point in Cartesian space
+        :type vector: list
+        :param R: The circumference of the Earth at the coordinates of this point. 
+        :type R: float
+        :returns: :class:`model.Point` -- A Point in two-dimensional space
+        """
         x = vector[0]
         y = vector[1]
         z = vector[2]
@@ -126,18 +177,50 @@ class Point:
         return Point(lon, lat)
 
     def north(self, distance):
+        """Create a Point at the specified distance due north of this Point
+
+        :param distance: Distance in meters
+        :type distance: float
+        :returns: :class:`model.Point` -- A Point north of this point
+        """
         return self.pointAtDistance(distance, bearing = 0)
 
     def south(self, distance):
+        """Create a Point at the specified distance due sourth of this Point
+
+        :param distance: Distance in meters
+        :type distance: float
+        :returns: :class:`model.Point` -- A Point south of this point
+        """
         return self.pointAtDistance(distance, bearing = pi)
 
     def east(self, distance):
+        """Create a Point at the specified distance due east of this Point
+
+        :param distance: Distance in meters
+        :type distance: float
+        :returns: :class:`model.Point` -- A Point east of this point
+        """
         return self.pointAtDistance(distance, bearing = 0.5*pi)        
 
     def west(self, distance):
+        """Create a Point at the specified distance due west of this Point
+
+        :param distance: Distance in meters
+        :type distance: float
+        :returns: :class:`model.Point` -- A Point west of this point
+        """
         return self.pointAtDistance(distance, bearing = 1.5 * pi)
 
     def distanceTo(self, other, R = 6378137):
+        """Calculate the Haversine distance between this Point and another Point
+
+        :param other: The other Point
+        :type other: :class:`model.Point`
+        :param R: The circumference of the Earth at the coordinates of this point. 
+        :type R: float
+        :returns: float -- The distance in meters
+        """
         dLat = radians(other.lat - self.lat)
         dLon = radians(other.lon - self.lon)
         lat0 = radians(self.lat)
@@ -149,6 +232,16 @@ class Point:
         return R * c
 
     def pointAtDistance(self, distance, bearing, R = 6378137):
+        """Create a Point at a specified distance and bearing from this Point
+
+        :param distance: Distance in meters
+        :type distance: float
+        :param bearing: Bearing in radians
+        :type bearing: float
+        :param R: The circumference of the Earth at the coordinates of this point. 
+        :type R: float
+        :returns: :class:`model.Point` -- A Point at the specified distance and bearing from this Point
+        """
         d = distance/R
         b = bearing
         point = self.toRadians()
@@ -174,20 +267,28 @@ class Point:
 
 
 class Graph:
-    
+    """A Graph of Edges
+
+    :param edges: A list of edges
+    :type edges: list
+    """
     def __init__(self, edges):
         self.edges = edges
         self.updateNodes()
         self.randomizeEdgeLengths()
 
+
     def updateNodes(self):
+        """Determine what the nodes are of this Graph. 
+
+        This method should be called after changing the Graph's list of edges
+        """
         nodes = set()
         for edge in self.edges:
             nodes.add(edge.start)
             nodes.add(edge.end)
 
         self.nodes = nodes
-    
 
     def randomizeEdgeLengths(self):
         lengths = {}
@@ -254,6 +355,14 @@ class Graph:
 
 
     def length(self, start, end):
+        """Determine the length of the Edge between start and end
+
+        :param start: A start point
+        :type start: :class:`model.Point`
+        :param end: An end point
+        :type end: :class:`model.Point`
+        :returns: float -- Length of the shortest edge if start and end are on an edge in this Graph, or ``None`` otherwise.
+        """
         edgeLengths = []
         edges = [Edge(start,end), Edge(end, start)]
 
@@ -289,15 +398,57 @@ class Graph:
 
 class Simulation:
     # Create a new simulation object
-    def __init__(self, pathDict, runTime):
-        self.pathDict = pathDict
+    def __init__(self, edgesDict, runTime, maxSpeed, acceleration, deceleration, noiseFactor, storeFrames):
+        """
+        :param edgesDict: Dictionary with a list of edges as key and a number of trucks on those edges as value
+        :type edgesDict: dict
+        :param runTime: Total running time of the simulation
+        :type runTime: int
+        :param maxSpeed: Maximum speed of vehicles in the simulation
+        :param acceleration: Maximum acceleration of vehicles in the simulation
+        :param deceleration: Maximum deceleration of vehicles in the simulation
+        :param noiseFactor: Factor of noise to be added to vehicle movement
+        :param storeFrames: Should all frames (snapshots of vehicle positions) be stored?
+        """
         self.runTime = runTime
         self.vehicles = []
-        for path, number in pathDict:
-            pass
+        self.paths = []
+        self.maxSpeed = maxSpeed
+        self.acceleration = acceleration
+        self.deceleration = deceleration
+        self.noiseFactor = noiseFactor
+        
+        self.storeFrames = storeFrames
+        self.frames = {}
+        for edges, number in edgesDict:
+            vg = VehicleGenerator(number, runTime)
+            path = Path(edges, vg)
+            self.paths.add(path)
 
     def run(self):
-        pass
+        """
+        Run the simulation
+        """
+        for time in range(0, self.runTime):
+            # Go through all paths to check for new vehicles
+            for path in self.paths:
+                # Check if there are any new vehicles on this path
+                for i in range(path.vehicleGenerator.vehicles[time]):
+                    vehicle = Vehicle(id = len(self.vehicles), path = path, maxSpeed = self.maxSpeed, acceleration = self.acceleration, deceleration = self.deceleration, noiseFactor = self.noiseFactor)
+                    self.vehicles.append(vehicle)
+
+            # Should snapshots be stored?
+            if self.storeFrames:
+                frame = {}
+            
+            # Update ALL vehicles
+            for vehicle in self.vehicles:
+                vehicle.update()
+                # If snapshots are to be stored, store the position of the vehicle
+                if self.storeFrames:
+                    frame[vehicle] = vehicle.position
+            if self.storeFrames:
+                frames.append(frame)
 
 class Path:
     # edges: Edges that make up this Path
@@ -308,6 +459,10 @@ class Path:
 
     # Returns a sequential list of the points on the edges of this path
     def getPoints(self):
+        """Determine the subsequent points that are on the edges of this path
+
+        :returns: list -- A list of the Points connecting the edges of this path
+        """
         points = []
         if len(self.edges) > 0:
             points.append(self.edges[0].start)
