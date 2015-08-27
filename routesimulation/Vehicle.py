@@ -91,6 +91,7 @@ class Vehicle:
         self.noiseFactor = noiseFactor
         
         self.speed = 0
+        self.speedStatus = "accelerate"
     
         self.points = path.getPoints()
         self.position = self.points[0]
@@ -107,31 +108,59 @@ class Vehicle:
             # get direction and random vector
             direction = Vector.fromSimPoints(self.position, self.destination)
             noise = Vector.getRandom(self.noiseFactor)
-            #self.calculate_vectors()
-            #self.randomize_vector(self.random_factor)
             
-            # check if within destination distance (note: we use intensity of vecnorm and compare it with "speed" (also intensity)
-
             """
-            if self.vec_norm <= self.speed:
-                self.status = "arrived"
-                self.position = self.end
+            # check if the vessel enters "final" deceleration stage
+            if self.speedStatus == "decelerate":
+                self.speed -= self.deceleration
+                if self.speed < 0:
+                    self.speed = 0
+                    self.status = "arrived"
+                    print ("speed:" + str(self.speed))
+                    print (self.status)
+            else:
+                if self.destinationPoint == len(self.points) - 1:
+                    magnitude = direction.getNorm()
+                    decPoint = (magnitude ** 2) / (2 * self.deceleration)
+                    if decPoint > magnitude:
+                        #self.speed -= self.deceleration
+                        self.speedStatus = "decelerate"
             """
-            if False:
-                pass
+            
+            
+            # check if within destination distance (note: we use intensity of direction vector and compare it with "speed" (also intensity)
+            if direction.getNorm() <= self.speed:
+                # adjust position and acquire new destination point
+                self.position = self.destination
+                self.destinationPoint += 1
+                # check if this is the end of the route
+                if self.destinationPoint >= len(self.points):
+                    self.status = "arrived"
+                else:
+                    self.destination = self.points[self.destinationPoint]
             # calculate new position by summing direction and random vector; direction vectory (identity) is multiplied by "speed" (intensity)
             else:
                 # !!!! correct speed later !!!!
-                self.speed = self.maxSpeed
+                # add call to function that decides if acceleration or deceleration is needed
+                if self.speed <= self.maxSpeed - self.acceleration:
+                    self.speed += self.acceleration
+                #self.adjustSpeed()
+            
                 movement = direction.getIdentity() * self.speed + noise
                 self.position = movement.translateSimPoint(self.position)
                 self.status = "sailing"
                 
-                #newX = self.position.lon + self.
-                #newX = self.position[0] + self.vec_dir[0] * self.speed + self.ran_vec[0]
-                #newY = self.position[1] + self.vec_dir[1] * self.speed + self.ran_vec[1]
-                #self.position = (newX, newY)
-                #self.status = "sailing"
+    def adjustSpeed(self):
+        if self.speedStatus == "accelerate":
+            self.speed += self.acceleration
+            if self.speed > self.maxSpeed:
+                self.speed = self.maxSpeed
+                self.speedStatus = "cruise"
+                
+    def getDecelerationPoint(self, direction):
+        p = direction.getIdentity ^2 / (2 * self.deceleration)
+        return p
+                
                 
     def debugPlot(self, color):
         x = self.position.lon
@@ -139,49 +168,8 @@ class Vehicle:
         plt.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='k', markersize=4)
         
         
-"""
-    # update all vectors in order to get ship directional vectory (used to calculate nex position)
-    def calculate_vectors(self):
-        # create trajectory vector from current position to desired end point
-        self.vec_trip = (self.end[0] - self.position[0],    self.end[1] - self.position[1])
-        # normalize trajectory vector ...
-        self.vec_norm = np.sqrt(self.vec_trip[0] ** 2 + self.vec_trip[1] ** 2)
-        # .. and create directional vectory that is identity vector of the trajectory vector
-        self.vec_dir = (self.vec_trip[0] / self.vec_norm,   self.vec_trip[1] / self.vec_norm)
 
-    # random vector used to displace new position by random factor
-    def randomize_vector(self, scale):
-        # get x, y values in range -0.5 to 0.5
-        x = random.random() - 0.5
-        y = random.random() - 0.5
-        # normalize to get identity vector
-        vec_norm = np.sqrt(x ** 2   +   y ** 2)
-        self.ran_vec = (x / vec_norm * scale,  y / vec_norm * scale)
-    
-        
-    def update(self):
-        # update vessel position (and status) if ready or sailing
-        if (self.status == "ready") or (self.status == "sailing"):
-            # get direction and random vector
-            self.calculate_vectors()
-            self.randomize_vector(self.random_factor)
-            
-            # check if within destination distance (note: we use intensity of vecnorm and compare it with "speed" (also intensity)
-            if self.vec_norm <= self.speed:
-                self.status = "arrived"
-                self.position = self.end
-            # calculate new position by summing direction and random vector; direction vectory (identity) is multiplied by "speed" (intensity)
-            else:
-                newX = self.position[0] + self.vec_dir[0] * self.speed + self.ran_vec[0]
-                newY = self.position[1] + self.vec_dir[1] * self.speed + self.ran_vec[1]
-                self.position = (newX, newY)
-                self.status = "sailing"
-        
-    def plot(self, m):
-        x,y = m(self.position[0], self.position[1])
-        plt.plot(x, y, 'o', markerfacecolor=self.color, markeredgecolor='k', markersize=4)
-        
-"""
+
 
 A = Point(3.975766,52.060835)
 B = Point(2.0,52.8474)
@@ -197,8 +185,8 @@ DE = Edge(D,E)
 p = Path([AB, BC, CD, DE], VehicleGenerator(totalVehicles = 100, totalDuration = 1000))
 p2 = Path([BC,CD], VehicleGenerator(totalVehicles = 50, totalDuration = 500))
 
-V1 = Vehicle(1, p, 0.3, 1, 1, 0.01)
-V2 = Vehicle(2, p2, 10, 1, 1, 3)
+V1 = Vehicle(1, p, 0.8, 0.01, 0.2, 0.01)
+V2 = Vehicle(2, p2, 0.2, 0.01, 0.2, 0.01)
 
 plt.plot(A.lon, A.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
 plt.plot(B.lon, B.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
@@ -207,6 +195,14 @@ plt.plot(D.lon, D.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize
 plt.plot(E.lon, E.lat, 'o', markerfacecolor='k', markeredgecolor='k', markersize=8)
 
 V1.debugPlot('r')
-for i in range(0,10):
+#while (V1.status != "arrived"):
+for i in range(0,100):
     V1.update()
     V1.debugPlot('r')
+
+"""    
+V2.debugPlot('b')
+while (V2.status != "arrived"):
+    V2.update()
+    V2.debugPlot('b')
+"""    
