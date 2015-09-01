@@ -80,8 +80,25 @@ class View:
 		#Matplotlib init
 		self.figure = Figure(figsize = (5,4), dpi=120)
 		self.ax = self.figure.add_subplot(111)
-		self.ax.set_ylim([-20,20])
-		self.ax.set_xlim([-20,20])
+		# Calculate limits
+		minX, minY = float("Inf"), float("Inf")
+		maxX, maxY = -float("Inf"), -float("Inf")
+		
+		for frame in self.simulation.frames:
+			for vehicle, position in frame.items():
+				x = position.lon
+				y = position.lat
+				if x < minX:
+					minX = x
+				if x > maxX:
+					maxX = x
+				if y < minY:
+					minY = y
+				if y > maxY:
+					maxY = y
+
+		self.ax.set_ylim([minY,maxY])
+		self.ax.set_xlim([minX,maxX])
 		self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
 		self.canvas.show()
 		self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)

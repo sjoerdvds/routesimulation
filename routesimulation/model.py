@@ -9,6 +9,7 @@
 from math import radians, sin, cos, sqrt, asin, fabs, atan2, pi, tan
 import random
 import operator
+import numpy as np
 
 class Edge:
     """A directed edge between two points
@@ -419,11 +420,13 @@ class Simulation:
         self.noiseFactor = noiseFactor
         
         self.storeFrames = storeFrames
-        self.frames = {}
-        for edges, number in edgesDict:
+        self.frames = []
+        for edgeTuple in edgesDict:
+            number = edgeTuple[1]
+            edges = edgeTuple[0] 
             vg = VehicleGenerator(number, runTime)
             path = Path(edges, vg)
-            self.paths.add(path)
+            self.paths.append(path)
 
     def run(self):
         """
@@ -434,7 +437,7 @@ class Simulation:
             for path in self.paths:
                 # Check if there are any new vehicles on this path
                 for i in range(path.vehicleGenerator.vehicles[time]):
-                    vehicle = Vehicle(id = len(self.vehicles), path = path, maxSpeed = self.maxSpeed, acceleration = self.acceleration, deceleration = self.deceleration, noiseFactor = self.noiseFactor)
+                    vehicle = Vehicle(vehicleId = len(self.vehicles), path = path, maxSpeed = self.maxSpeed, acceleration = self.acceleration, deceleration = self.deceleration, noiseFactor = self.noiseFactor)
                     self.vehicles.append(vehicle)
 
             # Should snapshots be stored?
@@ -448,7 +451,7 @@ class Simulation:
                 if self.storeFrames:
                     frame[vehicle] = vehicle.position
             if self.storeFrames:
-                frames.append(frame)
+                self.frames.append(frame)
 
 class Path:
     # edges: Edges that make up this Path
@@ -491,3 +494,168 @@ class VehicleGenerator:
 
     def cdf(self,t):
         return t/self.totalDuration
+
+class Vector:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        
+    # creates vector from two points (touples)
+    def fromPoints(a, b):
+        return Vector(b[0] - a[0], b[1] - a[1])
+
+    # creates vector from two class (routesimulation) points        
+    def fromSimPoints(a, b):
+        return Vector(b.lon - a.lon, b.lat - a.lat)
+
+    #creates random vector with given scale (random identity vector * scale factor)    
+    def getRandom(scale):
+        tempVector = Vector(random.random() - 0.5, random.random() - 0.5)
+        return tempVector.getIdentity() * scale
+    
+    
+        
+    def __str__(self):
+        return "Vector[%f,%f]"%(self.x, self.y)
+
+    def __repr__(self):
+        return str(self)
+    
+    def __add__(self, vec2):
+        return Vector(self.x + vec2.x, self.y + vec2.y)
+        
+    def __sub__(self, vec2):
+        return Vector(self.x - vec2.x, self.y - vec2.y)
+        
+    def __mul__(self, val):
+        return Vector(self.x * val, self.y * val)
+        
+    def __div__(self, val):
+        return Vector(self.x / val, self.y / val)
+        
+        
+        
+    def getNorm(self):
+        return np.sqrt(self.x ** 2 + self.y ** 2)
+        
+    def getIdentity(self):
+        norm = self.getNorm()
+        return Vector(self.x / norm, self.y / norm)
+        
+        
+        
+        
+    def getDotProduct(vec1, vec2):
+        return (vec1.x * vec2.x + vec1.y * vec2.y)
+        
+    # calculates angle between two vectors (in radians)
+    def getAngleRad(vec1, vec2):
+        """
+        dot(A,B) = |A| * |B| * cos(angle) 
+        which can be rearranged to 
+        angle = arccos(dot(A,B) / (|A|* |B|))
+        """
+        return np.arccos(Vector.getDotProduct(vec1, vec2) / (vec1.getNorm() * vec2.getNorm()))
+        
+    # calculates angle between two vectors (in degrees)
+    def getAngle(vec1, vec2):
+        return Vector.getAngleRad(vec1,vec2) * 180 / np.pi
+        
+    
+    def translateSimPoint(self, pt):
+        return Point(pt.lon + self.x, pt.lat + self.y)
+        
+        
+        
+class Vehicle:    
+    def __init__(self, vehicleId, path, maxSpeed, acceleration, deceleration, noiseFactor):
+        self.vehicleId = vehicleId
+        self.maxSpeed = maxSpeed
+        self.acceleration = acceleration
+        self.deceleration = deceleration
+        
+        self.noiseFactor = noiseFactor
+        
+        self.speed = 0
+        self.speedStatus = "accelerate"
+    
+        self.points = path.getPoints()
+        self.position = self.points[0]
+        if len(self.points) > 1:
+            self.destinationPoint = 1
+            self.destination = self.points[self.destinationPoint]
+            self.status = "ready"
+        else:
+            self.status = "arrived"
+            
+    def update(self):
+        # update vessel position (and status) if ready or sailing
+        if (self.status == "ready") or (self.status == "sailing"):
+            # get direction and random vector
+            direction = Vector.fromSimPoints(self.position, self.destination)
+            noise = Vector.getRandom(self.noiseFactor)
+            
+            """
+            # check if the vessel enters "final" deceleration stage
+            if self.speedStatus == "decelerate":
+                self.speed -= self.deceleration
+                if self.speed < 0:
+                    self.speed = 0
+                    self.status = "arrived"
+                    print ("speed:" + str(self.speed))
+                    print (self.status)
+            else:
+                if self.destinationPoint == len(self.points) - 1:
+                    magnitude = direction.getNorm()
+                    decPoint = (magnitude ** 2) / (2 * self.deceleration)
+                    if decPoint > magnitude:
+                        #self.speed -= self.deceleration
+                        self.speedStatus = "decelerate"
+            """
+            
+            
+            # check if within destination distance (note: we use intensity of direction vector and compare it with "speed" (also intensity)
+            if self.position.distanceTo(self.destination) <= self.speed:
+                # adjust position and acquire new destination point
+                self.position = self.destination
+                self.destinationPoint += 1
+                # check if this is the end of the route
+                if self.destinationPoint >= len(self.points):
+                    self.status = "arrived"
+                else:
+                    self.destination = self.points[self.destinationPoint]
+            # calculate new position by summing direction and random vector; direction vectory (identity) is multiplied by "speed" (intensity)
+            else:
+                # !!!! correct speed later !!!!
+                # add call to function that decides if acceleration or deceleration is needed
+                if self.speed <= self.maxSpeed - self.acceleration:
+                    self.speed += self.acceleration
+                #self.adjustSpeed()
+            
+                movement = direction.getIdentity() * self.speed + noise
+                # Calculate the course from the movement vector
+                course = Vector.getAngleRad(Vector(0,1), movement)
+                
+                # The next position is 'speed' away from the current point on the given course
+                positionOld = self.position
+                self.position = self.position.pointAtDistance(distance = self.speed, bearing = course)
+                
+                #self.position = movement.translateSimPoint(self.position)
+                self.status = "sailing"
+                
+    def adjustSpeed(self):
+        if self.speedStatus == "accelerate":
+            self.speed += self.acceleration
+            if self.speed > self.maxSpeed:
+                self.speed = self.maxSpeed
+                self.speedStatus = "cruise"
+                
+    def getDecelerationPoint(self, direction):
+        p = direction.getIdentity ^2 / (2 * self.deceleration)
+        return p
+                
+                
+    def debugPlot(self, color):
+        x = self.position.lon
+        y = self.position.lat
+        plt.plot(x, y, 'o', markerfacecolor=color, markeredgecolor='k', markersize=4)
