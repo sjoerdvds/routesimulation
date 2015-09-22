@@ -1,5 +1,7 @@
 from routesimulation.model import *
 from routesimulation.plot import *
+from routesimulation.io import *
+
 A = Point(3.975766,52.060835)
 B = Point(2.0,52.8474)
 C = Point(-0.05,53.9866)
@@ -15,8 +17,8 @@ DE = Edge(D,E)
 edgesDict = [([AB],100), ([BC],10), ([CD],74), ([DE],25)]
 simulation = Simulation(edgesDict = edgesDict, runTime = 1000, maxSpeed = 12, acceleration = 2, deceleration = 2.5, noiseFactor = 5, storeFrames = True)
 simulation.run()
-Controller(simulation)
-
+#Controller(simulation)
+exportToDB("routesimulation", simulation)
 #C
 #|\
 #| \
